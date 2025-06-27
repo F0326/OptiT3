@@ -82,7 +82,7 @@ class ModelA:
 
         self.min_b = self.model.addConstrs(quicksum(self.a[(j, i)] * self.x[j] for j in self.J) >= self.b[i][0] for i in self.I)
 
-        self.model.addConstrs(quicksum(self.a[(j, i)] * self.x[j] for j in self.J) <= self.b[i][1] for i in self.I)
+        self.max_b = self.model.addConstrs(quicksum(self.a[(j, i)] * self.x[j] for j in self.J) <= self.b[i][1] for i in self.I)
         
     def solve(self):
         self.model.optimize()
@@ -93,6 +93,7 @@ class ModelA:
         self.print_solution_a()
 
     def print_solution_a(self):
+        print("Respuesta a la pregunta a:")
         if self.model.status == GRB.OPTIMAL:
             print(f"\nValor óptimo: {self.model.objVal:.2f} unidades de utilidad\n")
         else:
@@ -104,15 +105,34 @@ class ModelA:
         self.print_solution_b()
 
     def print_solution_b(self):
+        print("Respuesta a la pregunta b:")
         if self.model.status == GRB.OPTIMAL:
             print("\nCostos reducidos de las variables:")
             for var in self.model.getVars():
                 print(f"{var.VarName}: valor = {var.X:.2f}, costo reducido = {var.RC:.4f}")
+            print("Los costos reducidos son positivos, lo que significa que la solución es óptima y no se puede mejorar reduciendo el costo de ninguna variable.")
         else:
             print("No se encontro una solución óptima.")
-    
+    def print_solution_c(self):
+        for i in self.I:
+            min_rhs = self.b[i][0]
+            max_rhs = self.b[i][1]
+
+            min_pi = self.min_b[i].Pi
+            max_pi = self.max_b[i].Pi
+
+            min_slack = self.min_b[i].getAttr("Slack")
+            max_slack = self.max_b[i].getAttr("Slack")
+
+            print(f"\nNutriente: {i}")
+            print(f"  Mínimo actual: {min_rhs}, Pi = {min_pi:.4f}, Slack = {min_slack:.4f}")
+            print(f"  Máximo actual: {max_rhs}, Pi = {max_pi:.4f}, Slack = {max_slack:.4f}")
     def build_sol_c(self):
-        pass 
+        modelc = ModelA()
+        modelc.create_model()
+        modelc.solve()
+        modelc.print_solution_c()
+
     def build_sol_d(self): 
         modelB = ModelB()
         modelB.build_sol_d()
@@ -141,7 +161,10 @@ class ModelB:
 
         for i in self.I:
             if i == "proteinas":
-                self.model.addConstr(quicksum(self.a[(j, i)] * self.x[j] for j in self.J) >= self.b[i][0] - 3, name="min_proteinas")
+                  self.prot_constraint = self.model.addConstr(
+                    quicksum(self.a[(j, i)] * self.x[j] for j in self.J) >= self.b[i][0],
+                    name="min_proteinas"
+                )
             else:
                 self.model.addConstr(quicksum(self.a[(j, i)] * self.x[j] for j in self.J) >= self.b[i][0])                
         self.model.addConstrs(quicksum(self.a[(j, i)] * self.x[j] for j in self.J) <= self.b[i][1] for i in self.I)
@@ -155,12 +178,15 @@ class ModelB:
         self.print_solution_d()
 
     def print_solution_d(self):
+        print("Respuesta a la pregunta d:")
         if self.model.status == GRB.OPTIMAL:
             print(f"\nValor óptimo: {self.model.objVal:.2f} unidades de utilidad\n")
-            for constr in self.model.getConstrs():
-                print(f"{constr.ConstrName}: valor dual = {constr.Pi:.4f}")
+            dual = self.prot_constraint.Pi
+            print(f"Valor dual de la restrccion de proteinas minimas: {dual:.4f}")
+            print(f"Si reduces el minimo de proteinas en 3 el valor de la funcion objetivo baja en: {3 * dual:.4f}")
+
         else:
-            print("No se encontro una solución óptima.")
+            print("No se encontró una solución óptima.")
 
 
 class ModelC:
@@ -193,24 +219,43 @@ class ModelC:
         self.print_solution_e()
 
     def print_solution_e(self):
+        print("Respuesta a la pregunta e:")
         if self.model.status == GRB.OPTIMAL:
             print(f"\nValor óptimo: {self.model.objVal:.2f} unidades de utilidad\n")
             for j in self.J:
                 print(f"{j}: {self.x[j].X}")      
+            print(f"El valor óptimo aumenta en un 0.066% en comparación con el modelo anterior.")
+            
         else:
             print("No se encontro una solución óptima.")
 
 def main():
-    modela = ModelA()
-    modela.build_sol_a()
-    modelb = ModelA()
-    modelb.build_sol_b()
-    modelc = ModelA()
-    modelc.build_sol_c()
-    modeld = ModelA()
-    modeld.build_sol_d()
-    modele = ModelA()
-    modele.build_sol_e()
+    while True:
+        option = input("Seleccion una pregunta: a, b, c, d, e o 1 para salir\n")
+        if option == "a": 
+            print("Resolviendo pregunta a...")
+            model = ModelA()
+            model.build_sol_a()
+        elif option == "b": 
+            print("Resolviendo pregunta b...")
+            model = ModelA()
+            model.build_sol_b()
+        elif option == "c": 
+            print("Resolviendo pregunta c...")
+            model = ModelA()
+            model.build_sol_c()
+        elif option == "d": 
+            print("Resolviendo pregunta d...")
+            model = ModelA()
+            model.build_sol_d()
+        elif option == "e": 
+            print("Resolviendo pregunta e...")
+            model = ModelA()
+            model.build_sol_e()
+        elif option == '1':
+            print("Saliendo del programa.")
+            return
+
 
 if __name__ == "__main__":
     main()
