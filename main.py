@@ -96,6 +96,9 @@ class ModelA:
         print("Respuesta a la pregunta a:")
         if self.model.status == GRB.OPTIMAL:
             print(f"\nValor óptimo: {self.model.objVal:.2f} unidades de utilidad\n")
+            print("Kilos de cada cereal:")
+            for j in self.J:
+                print(f"{j}: {self.x[j].X:.2f} kilos")
         else:
             print("No se encontro una solución óptima.")
 
@@ -114,24 +117,13 @@ class ModelA:
         else:
             print("No se encontro una solución óptima.")
     def print_solution_c(self):
-        for i in self.I:
-            min_rhs = self.b[i][0]
-            max_rhs = self.b[i][1]
-
-            min_pi = self.min_b[i].Pi
-            max_pi = self.max_b[i].Pi
-
-            min_slack = self.min_b[i].getAttr("Slack")
-            max_slack = self.max_b[i].getAttr("Slack")
-
-            print(f"\nNutriente: {i}")
-            print(f"  Mínimo actual: {min_rhs}, Pi = {min_pi:.4f}, Slack = {min_slack:.4f}")
-            print(f"  Máximo actual: {max_rhs}, Pi = {max_pi:.4f}, Slack = {max_slack:.4f}")
+        pass 
     def build_sol_c(self):
         modelc = ModelA()
         modelc.create_model()
         modelc.solve()
         modelc.print_solution_c()
+    
 
     def build_sol_d(self): 
         modelB = ModelB()
